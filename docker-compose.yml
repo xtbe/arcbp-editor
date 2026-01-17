@@ -1,0 +1,11 @@
+version: "3.8"
+
+services:
+  web:
+    build: .
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    # For development you can uncomment the volume below to pick up changes
+    # volumes:
+    #   - ./bpeditor.html:/usr/share/nginx/html/index.html:ro
