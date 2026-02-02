@@ -4,6 +4,30 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script
+      src="https://browser.sentry-cdn.com/7.99.0/bundle.min.js"
+      integrity="sha384-7kR3VIeE+vp0Lf4pJYvPTMDY7UjGJP3N8oLwxJAW1wTJvLHJMVLrLfq0cTqJ2JHV"
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      // Initialize GlitchTip (Sentry-compatible) error tracking
+      if (window.Sentry) {
+        Sentry.init({
+          dsn: "YOUR_GLITCHTIP_DSN_HERE",
+          // Set tracesSampleRate to 1.0 to capture 100% of transactions for performance monitoring.
+          // Adjust this value in production as needed.
+          tracesSampleRate: 1.0,
+          // Enable capturing unhandled promise rejections
+          integrations: [
+            new Sentry.BrowserTracing(),
+            new Sentry.Replay()
+          ],
+          // Session Replay sample rate
+          replaysSessionSampleRate: 0.1,
+          replaysOnErrorSampleRate: 1.0,
+        });
+      }
+    </script>
     <title>Blueprints Data Entry</title>
   </head>
 
