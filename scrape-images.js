@@ -124,6 +124,13 @@ function extractBlueprints(html) {
 }
 
 /**
+ * Normalize a blueprint name for case-insensitive matching.
+ */
+function normalizeKey(name) {
+  return name.trim().toLowerCase();
+}
+
+/**
  * Sanitize a blueprint name into a safe filename.
  */
 function toFilename(name) {
@@ -198,7 +205,7 @@ function updateBlueprintsFile(jsonPath, imageMap) {
     // Only update if image is empty / not already set
     if (bp.image) continue;
 
-    const key = bp.name?.trim().toLowerCase();
+    const key = bp.name ? normalizeKey(bp.name) : "";
     if (key && imageMap.has(key)) {
       bp.image = imageMap.get(key);
       updated++;
@@ -245,7 +252,7 @@ async function main() {
   for (const bp of blueprints) {
     const relPath = await downloadImage(bp.imageUrl, bp.name, args.output);
     if (relPath) {
-      imageMap.set(bp.name.toLowerCase(), relPath);
+      imageMap.set(normalizeKey(bp.name), relPath);
     }
   }
 

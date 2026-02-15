@@ -33,7 +33,7 @@ docker run --rm -p 8080:80 -v ./images:/usr/share/nginx/html/images:ro arcbp-edi
 
 The `scrape-images.js` script downloads blueprint images from the [Arc Raiders Fandom wiki](https://arc-raiders.fandom.com/wiki/Blueprints) and optionally updates a local blueprints JSON file.
 
-### Running locally (requires Node.js 18+)
+### Running locally (requires Node.js ≥ 20.18.1)
 
 ```bash
 npm install
