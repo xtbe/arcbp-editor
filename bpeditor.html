@@ -852,6 +852,8 @@
             "w-32 h-32 rounded-xl border-2 border-dashed border-zinc-700 bg-zinc-950 grid place-items-center text-zinc-500 text-xs cursor-pointer transition-colors" +
             (bp.image ? " hidden" : "")
           imgEmpty.innerHTML = `<div class="text-center pointer-events-none"><div class="text-lg mb-1">⬆️</div><div>Drop image<br>or click</div></div>`
+          imgEmpty.setAttribute("role", "button")
+          imgEmpty.setAttribute("aria-label", "Click or drag to upload image")
           imgEmpty.addEventListener("click", () => imgFileInput.click())
 
           // Make preview clickable too
@@ -860,7 +862,11 @@
 
           // Drag-and-drop on the drop zone and preview
           function handleImageFile(file) {
-            if (!file || !file.type.startsWith("image/")) return
+            if (!file) return
+            if (!file.type.startsWith("image/")) {
+              setStatus("warn", "Only image files are accepted.")
+              return
+            }
             const reader = new FileReader()
             reader.onload = () => {
               bp.image = reader.result
