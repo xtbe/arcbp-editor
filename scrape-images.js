@@ -4,7 +4,7 @@
  * scrape-images.js
  *
  * Scrapes blueprint images from the Arc Raiders wiki using a headless browser
- * (Puppeteer) and optionally updates a local blueprints JSON file with the
+ * (Playwright) and optionally updates a local blueprints JSON file with the
  * downloaded image paths.
  *
  * A headless browser is required because the Fandom wiki renders its content
@@ -26,7 +26,7 @@
 const fs = require("fs");
 const path = require("path");
 const { URL } = require("url");
-const puppeteer = require("puppeteer");
+const { chromium } = require("playwright");
 
 const WIKI_URL = "https://arc-raiders.fandom.com/wiki/Blueprints";
 
@@ -56,19 +56,17 @@ function parseArgs(argv) {
  */
 async function scrapeBlueprints(url) {
   console.log("  Launching headless browser …");
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+  const browser = await chromium.launch({ headless: true });
 
   try {
-    const page = await browser.newPage();
-    await page.setUserAgent(
-      "arcbp-editor-scraper/1.0 (https://github.com/xtbe/arcbp-editor)"
-    );
+    const context = await browser.newContext({
+      userAgent:
+        "arcbp-editor-scraper/1.0 (https://github.com/xtbe/arcbp-editor)",
+    });
+    const page = await context.newPage();
 
     console.log("  Navigating to wiki page …");
-    await page.goto(url, { waitUntil: "networkidle2", timeout: 60000 });
+    await page.goto(url, { waitUntil: "networkidle", timeout: 60000 });
 
     // Wait for the article content to be present
     await page.waitForSelector(".mw-parser-output", { timeout: 30000 });

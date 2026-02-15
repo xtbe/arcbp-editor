@@ -31,25 +31,23 @@ docker run --rm -p 8080:80 -v ./images:/usr/share/nginx/html/images:ro arcbp-edi
 
 ## Scraping Images from the Wiki
 
-The `scrape-images.js` script uses a headless browser ([Puppeteer](https://pptr.dev/)) to scrape blueprint images from the [Arc Raiders Fandom wiki](https://arc-raiders.fandom.com/wiki/Blueprints). A headless browser is required because the wiki renders its content dynamically with JavaScript.
+The `scrape-images.js` script uses a headless browser ([Playwright](https://playwright.dev/)) to scrape blueprint images from the [Arc Raiders Fandom wiki](https://arc-raiders.fandom.com/wiki/Blueprints). A headless browser is required because the wiki renders its content dynamically with JavaScript.
 
 The script optionally updates a local blueprints JSON file.
 
-### Running locally (requires Node.js ≥ 18)
+### Running locally (requires Node.js ≥ 22)
 
 ```bash
 npm install
+# Install Playwright's Chromium browser
+npx playwright install --with-deps chromium
+
 # Download images to ./images (skips existing files)
 npm run scrape
 
 # Download images and update a blueprints JSON file
 node scrape-images.js --blueprints blueprints.json
 ```
-
-> **Note:** Puppeteer will automatically download a compatible Chromium binary on
-> `npm install`. If you prefer to use a system-installed Chromium, set
-> `PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true` and
-> `PUPPETEER_EXECUTABLE_PATH=/path/to/chromium`.
 
 ### Running inside Docker
 
