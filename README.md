@@ -18,3 +18,13 @@ Or with Docker Compose:
 docker compose up --build
 # then open http://localhost:8080
 ```
+
+## Images
+
+Blueprint images are served from a local `images/` folder that is bind-mounted into the container. Place your image files in the `images/` directory at the project root, then reference them using relative paths (e.g. `images/anvil.png`) in the editor's **Image** field.
+
+Docker Compose automatically mounts `./images` as a read-only volume. When running with plain Docker, add the mount manually:
+
+```bash
+docker run --rm -p 8080:80 -v ./images:/usr/share/nginx/html/images:ro arcbp-editor
+```
