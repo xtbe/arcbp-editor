@@ -654,8 +654,8 @@
             wrapper.innerHTML = `
         <div class="flex items-start gap-3">
           ${bp.image
-            ? `<img src="${escapeHtml(bp.image)}" alt="" class="mt-0.5 w-9 h-9 rounded-xl border border-zinc-800 bg-zinc-950 object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display=''">`
-              + `<div class="mt-0.5 w-9 h-9 rounded-xl border border-zinc-800 bg-zinc-950 grid place-items-center text-sm" style="display:none">${String(idx + 1).padStart(2, "0")}</div>`
+            ? `<img src="${escapeHtml(bp.image)}" alt="${escapeHtml(bp.name || "Blueprint")}" class="mt-0.5 w-9 h-9 rounded-xl border border-zinc-800 bg-zinc-950 object-cover" data-thumb-img>`
+              + `<div class="mt-0.5 w-9 h-9 rounded-xl border border-zinc-800 bg-zinc-950 grid place-items-center text-sm hidden" data-thumb-fallback>${String(idx + 1).padStart(2, "0")}</div>`
             : `<div class="mt-0.5 w-9 h-9 rounded-xl border border-zinc-800 bg-zinc-950 grid place-items-center text-sm">${String(idx + 1).padStart(2, "0")}</div>`
           }
           <div class="min-w-0 flex-1">
@@ -688,6 +688,14 @@
           </div>
         </div>
       `
+
+            const thumbImg = wrapper.querySelector("[data-thumb-img]")
+            if (thumbImg) {
+              thumbImg.addEventListener("error", () => {
+                thumbImg.classList.add("hidden")
+                wrapper.querySelector("[data-thumb-fallback]").classList.remove("hidden")
+              })
+            }
 
             wrapper.addEventListener("click", () => {
               selectedIndex = idx
