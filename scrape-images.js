@@ -171,7 +171,7 @@ async function autoScroll(page) {
     });
   });
   // Small pause to let final lazy images load
-  await new Promise((r) => setTimeout(r, 1000));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 }
 
 /**

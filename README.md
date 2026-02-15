@@ -35,7 +35,7 @@ The `scrape-images.js` script uses a headless browser ([Puppeteer](https://pptr.
 
 The script optionally updates a local blueprints JSON file.
 
-### Running locally (requires Node.js ≥ 20.18.1)
+### Running locally (requires Node.js ≥ 18)
 
 ```bash
 npm install
