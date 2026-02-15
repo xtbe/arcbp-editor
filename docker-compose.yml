@@ -7,6 +7,6 @@ services:
       - "8080:80"
     restart: unless-stopped
     volumes:
-      - ./images:/usr/share/nginx/html/images:ro
+      - ./data:/usr/share/nginx/html/data:ro
     # For development you can uncomment the volume below to pick up changes
     # - ./bpeditor.html:/usr/share/nginx/html/index.html:ro
