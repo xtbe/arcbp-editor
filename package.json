@@ -7,6 +7,6 @@
     "scrape": "node scrape-images.js"
   },
   "dependencies": {
-    "cheerio": "^1.0.0"
+    "puppeteer": "^24.37.3"
   }
 }

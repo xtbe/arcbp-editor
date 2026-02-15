@@ -3,8 +3,12 @@
 /**
  * scrape-images.js
  *
- * Scrapes blueprint images from the Arc Raiders wiki and optionally
- * updates a local blueprints JSON file with the downloaded image paths.
+ * Scrapes blueprint images from the Arc Raiders wiki using a headless browser
+ * (Puppeteer) and optionally updates a local blueprints JSON file with the
+ * downloaded image paths.
+ *
+ * A headless browser is required because the Fandom wiki renders its content
+ * dynamically with JavaScript.
  *
  * Usage:
  *   node scrape-images.js [--output <dir>] [--blueprints <file>]
@@ -22,7 +26,7 @@
 const fs = require("fs");
 const path = require("path");
 const { URL } = require("url");
-const cheerio = require("cheerio");
+const puppeteer = require("puppeteer");
 
 const WIKI_URL = "https://arc-raiders.fandom.com/wiki/Blueprints";
 
@@ -46,81 +50,128 @@ function parseArgs(argv) {
 }
 
 /**
- * Fetch the HTML content of the wiki page.
+ * Launch a headless browser, navigate to the wiki page, wait for the content
+ * to render, then extract blueprint names and image URLs from the DOM.
+ * Returns an array of { name, imageUrl }.
  */
-async function fetchPage(url) {
-  const res = await fetch(url, {
-    headers: {
-      "User-Agent":
-        "arcbp-editor-scraper/1.0 (https://github.com/xtbe/arcbp-editor)",
-    },
+async function scrapeBlueprints(url) {
+  console.log("  Launching headless browser …");
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
+
+  try {
+    const page = await browser.newPage();
+    await page.setUserAgent(
+      "arcbp-editor-scraper/1.0 (https://github.com/xtbe/arcbp-editor)"
+    );
+
+    console.log("  Navigating to wiki page …");
+    await page.goto(url, { waitUntil: "networkidle2", timeout: 60000 });
+
+    // Wait for the article content to be present
+    await page.waitForSelector(".mw-parser-output", { timeout: 30000 });
+
+    // Scroll down to trigger any lazy-loaded images
+    await autoScroll(page);
+
+    console.log("  Extracting blueprint data from the page …\n");
+
+    // Extract data from the fully rendered DOM
+    const results = await page.evaluate(() => {
+      const entries = [];
+      const seen = new Set();
+
+      // Strategy 1: Look for table rows with links and images
+      document
+        .querySelectorAll(".mw-parser-output table tr")
+        .forEach((tr) => {
+          const link = tr.querySelector("a[title]");
+          const name = link
+            ? (link.getAttribute("title") || link.textContent || "").trim()
+            : "";
+          if (!name) return;
+
+          const img = tr.querySelector("img");
+          if (!img) return;
+
+          let imageUrl =
+            img.getAttribute("data-src") || img.getAttribute("src") || "";
+          if (!imageUrl) return;
+
+          // Remove scaling parameters to get the full-size image
+          imageUrl = imageUrl.replace(/\/scale-to-width-down\/\d+/, "");
+          imageUrl = imageUrl.replace(/\/revision\/latest.*$/, "/revision/latest");
+
+          if (!seen.has(name.toLowerCase())) {
+            seen.add(name.toLowerCase());
+            entries.push({ name, imageUrl });
+          }
+        });
+
+      // Strategy 2: Gallery items and figure elements (fallback)
+      document
+        .querySelectorAll(
+          ".mw-parser-output .wikia-gallery-item, .mw-parser-output figure"
+        )
+        .forEach((el) => {
+          const captionEl =
+            el.querySelector(".lightbox-caption") ||
+            el.querySelector("figcaption");
+          const linkEl = el.querySelector("a[title]");
+          const caption = captionEl
+            ? captionEl.textContent.trim()
+            : linkEl
+              ? (linkEl.getAttribute("title") || "").trim()
+              : "";
+          if (!caption) return;
+
+          const img = el.querySelector("img");
+          if (!img) return;
+
+          let imageUrl =
+            img.getAttribute("data-src") || img.getAttribute("src") || "";
+          if (!imageUrl) return;
+
+          imageUrl = imageUrl.replace(/\/scale-to-width-down\/\d+/, "");
+          imageUrl = imageUrl.replace(/\/revision\/latest.*$/, "/revision/latest");
+
+          if (!seen.has(caption.toLowerCase())) {
+            seen.add(caption.toLowerCase());
+            entries.push({ name: caption, imageUrl });
+          }
+        });
+
+      return entries;
+    });
+
+    return results;
+  } finally {
+    await browser.close();
   }
-  return res.text();
 }
 
 /**
- * Parse the wiki page and extract blueprint names and their image URLs.
- * Returns an array of { name, imageUrl }.
+ * Scroll through the entire page to trigger lazy-loaded images.
  */
-function extractBlueprints(html) {
-  const $ = cheerio.load(html);
-  const results = [];
-
-  // The Fandom wiki Blueprints page typically uses tables or card layouts.
-  // We look for links with images inside article content.
-  $(".mw-parser-output table")
-    .find("tr")
-    .each((_i, tr) => {
-      const $tr = $(tr);
-
-      // Try to find the blueprint name from a link in the row
-      const nameLink = $tr.find("a[title]").first();
-      const name = nameLink.attr("title") || nameLink.text().trim();
-      if (!name) return;
-
-      // Try to find an image in the row
-      const img = $tr.find("img").first();
-      if (!img.length) return;
-
-      // Prefer data-src (lazy-loaded) over src; strip scaling params
-      let imageUrl = img.attr("data-src") || img.attr("src") || "";
-      if (!imageUrl) return;
-
-      // Remove Fandom's image scaling parameters (e.g. /scale-to-width-down/40)
-      imageUrl = imageUrl.replace(/\/scale-to-width-down\/\d+/, "");
-      imageUrl = imageUrl.replace(/\/revision\/latest.*$/, "/revision/latest");
-
-      results.push({ name: name.trim(), imageUrl });
+async function autoScroll(page) {
+  await page.evaluate(async () => {
+    await new Promise((resolve) => {
+      let totalHeight = 0;
+      const distance = 400;
+      const timer = setInterval(() => {
+        window.scrollBy(0, distance);
+        totalHeight += distance;
+        if (totalHeight >= document.body.scrollHeight) {
+          clearInterval(timer);
+          resolve();
+        }
+      }, 100);
     });
-
-  // Fallback: also scan gallery items and figure elements
-  $(".mw-parser-output .wikia-gallery-item, .mw-parser-output figure").each(
-    (_i, el) => {
-      const $el = $(el);
-      const caption =
-        $el.find(".lightbox-caption, figcaption").text().trim() ||
-        $el.find("a[title]").attr("title") ||
-        "";
-      if (!caption) return;
-
-      const img = $el.find("img").first();
-      let imageUrl = img.attr("data-src") || img.attr("src") || "";
-      if (!imageUrl) return;
-
-      imageUrl = imageUrl.replace(/\/scale-to-width-down\/\d+/, "");
-      imageUrl = imageUrl.replace(/\/revision\/latest.*$/, "/revision/latest");
-
-      // Avoid duplicates
-      if (!results.some((r) => r.name === caption)) {
-        results.push({ name: caption, imageUrl });
-      }
-    }
-  );
-
-  return results;
+  });
+  // Small pause to let final lazy images load
+  await new Promise((r) => setTimeout(r, 1000));
 }
 
 /**
@@ -229,8 +280,7 @@ async function main() {
 
   console.log(`\n🔍 Fetching blueprint data from:\n   ${WIKI_URL}\n`);
 
-  const html = await fetchPage(WIKI_URL);
-  const blueprints = extractBlueprints(html);
+  const blueprints = await scrapeBlueprints(WIKI_URL);
 
   if (blueprints.length === 0) {
     console.log(
