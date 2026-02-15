@@ -795,21 +795,91 @@
           container.appendChild(rWs)
 
           // Image
-          const rImg = row("Image", "Relative path to image file (e.g. images/anvil.png)")
+          const rImg = row("Image", "Path or upload an image file")
           const imgWrap = document.createElement("div")
           imgWrap.className = "space-y-2"
 
+          // Hidden file input for image upload
+          const imgFileInput = document.createElement("input")
+          imgFileInput.type = "file"
+          imgFileInput.accept = "image/*"
+          imgFileInput.style.display = "none"
+
+          // Text input row with browse button
+          const imgInputRow = document.createElement("div")
+          imgInputRow.className = "flex gap-2"
+
           const imgInput = document.createElement("input")
           imgInput.className =
-            "w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-          imgInput.value = bp.image
+            "flex-1 px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+          imgInput.value = bp.image && !bp.image.startsWith("data:") ? bp.image : ""
           imgInput.placeholder = "images/example.png"
           imgInput.addEventListener("input", () => {
             bp.image = imgInput.value
             saveToStorage()
             renderList()
             updateJsonTextIfOpen()
-            // update preview
+            updateImgPreview()
+          })
+          imgInputRow.appendChild(imgInput)
+
+          const imgBrowseBtn = document.createElement("button")
+          imgBrowseBtn.type = "button"
+          imgBrowseBtn.className =
+            "px-3 py-2 rounded-xl bg-indigo-600/90 hover:bg-indigo-600 text-sm font-medium whitespace-nowrap"
+          imgBrowseBtn.textContent = "Browse…"
+          imgBrowseBtn.addEventListener("click", () => imgFileInput.click())
+          imgInputRow.appendChild(imgBrowseBtn)
+
+          imgWrap.appendChild(imgFileInput)
+          imgWrap.appendChild(imgInputRow)
+
+          // Image preview
+          const imgPreview = document.createElement("img")
+          imgPreview.className =
+            "w-32 h-32 object-contain rounded-xl border border-zinc-800 bg-zinc-950" +
+            (bp.image ? "" : " hidden")
+          if (bp.image) imgPreview.src = bp.image
+          imgPreview.alt = "Blueprint image preview"
+          imgPreview.addEventListener("error", () => {
+            imgPreview.classList.add("hidden")
+            imgEmpty.classList.remove("hidden")
+          })
+
+          // Drop zone / empty placeholder (clickable)
+          const imgEmpty = document.createElement("div")
+          imgEmpty.className =
+            "w-32 h-32 rounded-xl border-2 border-dashed border-zinc-700 bg-zinc-950 grid place-items-center text-zinc-500 text-xs cursor-pointer transition-colors" +
+            (bp.image ? " hidden" : "")
+          imgEmpty.innerHTML = `<div class="text-center pointer-events-none"><div class="text-lg mb-1">⬆️</div><div>Drop image<br>or click</div></div>`
+          imgEmpty.setAttribute("role", "button")
+          imgEmpty.setAttribute("aria-label", "Click or drag to upload image")
+          imgEmpty.addEventListener("click", () => imgFileInput.click())
+
+          // Make preview clickable too
+          imgPreview.style.cursor = "pointer"
+          imgPreview.addEventListener("click", () => imgFileInput.click())
+
+          // Drag-and-drop on the drop zone and preview
+          function handleImageFile(file) {
+            if (!file) return
+            if (!file.type.startsWith("image/")) {
+              setStatus("warn", "Only image files are accepted.")
+              return
+            }
+            const reader = new FileReader()
+            reader.onload = () => {
+              bp.image = reader.result
+              imgInput.value = ""
+              saveToStorage()
+              renderList()
+              updateJsonTextIfOpen()
+              updateImgPreview()
+            }
+            reader.readAsDataURL(file)
+          }
+
+          function updateImgPreview() {
             if (bp.image) {
               imgPreview.src = bp.image
               imgPreview.classList.remove("hidden")
@@ -818,26 +888,36 @@
               imgPreview.classList.add("hidden")
               imgEmpty.classList.remove("hidden")
             }
-          })
-          imgWrap.appendChild(imgInput)
+          }
 
-          const imgPreview = document.createElement("img")
-          imgPreview.className = bp.image
-            ? "w-32 h-32 object-contain rounded-xl border border-zinc-800 bg-zinc-950"
-            : "w-32 h-32 object-contain rounded-xl border border-zinc-800 bg-zinc-950 hidden"
-          if (bp.image) imgPreview.src = bp.image
-          imgPreview.alt = "Blueprint image preview"
-          imgPreview.addEventListener("error", () => {
-            imgPreview.classList.add("hidden")
-            imgEmpty.classList.remove("hidden")
+          ;[imgEmpty, imgPreview].forEach((el) => {
+            el.addEventListener("dragover", (e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              el.classList.add("ring-2", "ring-indigo-500")
+            })
+            el.addEventListener("dragleave", (e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              el.classList.remove("ring-2", "ring-indigo-500")
+            })
+            el.addEventListener("drop", (e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              el.classList.remove("ring-2", "ring-indigo-500")
+              const file = e.dataTransfer?.files?.[0]
+              handleImageFile(file)
+            })
           })
+
+          // File input change handler
+          imgFileInput.addEventListener("change", () => {
+            const file = imgFileInput.files?.[0]
+            imgFileInput.value = ""
+            handleImageFile(file)
+          })
+
           imgWrap.appendChild(imgPreview)
-
-          const imgEmpty = document.createElement("div")
-          imgEmpty.className = bp.image
-            ? "hidden"
-            : "w-32 h-32 rounded-xl border border-zinc-800 bg-zinc-950 grid place-items-center text-zinc-500 text-xs"
-          imgEmpty.textContent = "No image"
           imgWrap.appendChild(imgEmpty)
 
           rImg.querySelector(".md\\:col-span-8").appendChild(imgWrap)
