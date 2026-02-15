@@ -226,7 +226,7 @@
           <textarea
             id="pasteArea"
             class="w-full h-64 p-3 rounded-xl bg-zinc-950 border border-zinc-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
-            placeholder='{"blueprints":[{"name":"Example","workshop":"Gunsmith I","crafting_recipe":[{"item":"Duct Tape","quantity":1}],"available":true,"loot":false,"harvester_event":false,"quest_reward":false,"trials_reward":false}]}'
+            placeholder='{"blueprints":[{"name":"Example","workshop":"Gunsmith I","image":"images/example.png","crafting_recipe":[{"item":"Duct Tape","quantity":1}],"available":true,"loot":false,"harvester_event":false,"quest_reward":false,"trials_reward":false}]}'
           ></textarea>
           <div class="mt-3 flex items-center gap-2 justify-end">
             <button
@@ -297,6 +297,7 @@
             {
               name: "Angled Grip II",
               workshop: "Gunsmith II",
+              image: "",
               crafting_recipe: [
                 { item: "Mechanical Components", quantity: 2 },
                 { item: "Duct Tape", quantity: 3 },
@@ -310,6 +311,7 @@
             {
               name: "Angled Grip III",
               workshop: "Gunsmith III",
+              image: "",
               crafting_recipe: [
                 { item: "Mod Components", quantity: 2 },
                 { item: "Duct Tape", quantity: 5 },
@@ -323,6 +325,7 @@
             {
               name: "Anvil",
               workshop: "Gunsmith II",
+              image: "",
               crafting_recipe: [
                 { item: "Mechanical Components", quantity: 5 },
                 { item: "Simple Gun Parts", quantity: 5 },
@@ -336,6 +339,7 @@
             {
               name: "Anvil Splitter",
               workshop: "N/A",
+              image: "",
               crafting_recipe: [{ item: "N/A", quantity: 0 }],
               available: true,
               loot: false,
@@ -346,6 +350,7 @@
             {
               name: "Aphelion",
               workshop: "Gunsmith III",
+              image: "",
               crafting_recipe: [
                 { item: "Magnetic Accelerator", quantity: 3 },
                 { item: "Complex Gun Parts", quantity: 5 },
@@ -360,6 +365,7 @@
             {
               name: "Barricade Kit",
               workshop: "Utility Station II",
+              image: "",
               crafting_recipe: [{ item: "Mechanical Components", quantity: 1 }],
               available: true,
               loot: true,
@@ -370,6 +376,7 @@
             {
               name: "Bettina",
               workshop: "Gunsmith III",
+              image: "",
               crafting_recipe: [
                 { item: "Advanced Mechanical Components", quantity: 3 },
                 { item: "Heavy Gun Parts", quantity: 3 },
@@ -384,6 +391,7 @@
             {
               name: "Blaze Grenade",
               workshop: "Explosives Station III",
+              image: "",
               crafting_recipe: [
                 { item: "Explosive Compound", quantity: 1 },
                 { item: "Oil", quantity: 2 },
@@ -397,6 +405,7 @@
             {
               name: "Blue Light Stick",
               workshop: "Utility Station I",
+              image: "",
               crafting_recipe: [{ item: "Chemicals", quantity: 3 }],
               available: true,
               loot: true,
@@ -407,6 +416,7 @@
             {
               name: "Bobcat",
               workshop: "Gunsmith III",
+              image: "",
               crafting_recipe: [
                 { item: "Magnetic Accelerator", quantity: 1 },
                 { item: "Light Gun Parts", quantity: 3 },
@@ -494,6 +504,7 @@
             const b = bp && typeof bp === "object" ? bp : {}
             b.name = String(b.name ?? "")
             b.workshop = String(b.workshop ?? "")
+            b.image = String(b.image ?? "")
             if (!Array.isArray(b.crafting_recipe)) b.crafting_recipe = []
             b.crafting_recipe = b.crafting_recipe.map((r) => {
               const rr = r && typeof r === "object" ? r : {}
@@ -642,9 +653,11 @@
 
             wrapper.innerHTML = `
         <div class="flex items-start gap-3">
-          <div class="mt-0.5 w-9 h-9 rounded-xl border border-zinc-800 bg-zinc-950 grid place-items-center text-sm">
-            ${String(idx + 1).padStart(2, "0")}
-          </div>
+          ${bp.image
+            ? `<img src="${escapeHtml(bp.image)}" alt="" class="mt-0.5 w-9 h-9 rounded-xl border border-zinc-800 bg-zinc-950 object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display=''">`
+              + `<div class="mt-0.5 w-9 h-9 rounded-xl border border-zinc-800 bg-zinc-950 grid place-items-center text-sm" style="display:none">${String(idx + 1).padStart(2, "0")}</div>`
+            : `<div class="mt-0.5 w-9 h-9 rounded-xl border border-zinc-800 bg-zinc-950 grid place-items-center text-sm">${String(idx + 1).padStart(2, "0")}</div>`
+          }
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2">
               <div class="font-semibold truncate">${escapeHtml(
@@ -772,6 +785,55 @@
           })
           rWs.querySelector(".md\\:col-span-8").appendChild(wsInput)
           container.appendChild(rWs)
+
+          // Image
+          const rImg = row("Image", "Relative path to image file (e.g. images/anvil.png)")
+          const imgWrap = document.createElement("div")
+          imgWrap.className = "space-y-2"
+
+          const imgInput = document.createElement("input")
+          imgInput.className =
+            "w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+          imgInput.value = bp.image
+          imgInput.placeholder = "images/example.png"
+          imgInput.addEventListener("input", () => {
+            bp.image = imgInput.value
+            saveToStorage()
+            renderList()
+            updateJsonTextIfOpen()
+            // update preview
+            if (bp.image) {
+              imgPreview.src = bp.image
+              imgPreview.classList.remove("hidden")
+              imgEmpty.classList.add("hidden")
+            } else {
+              imgPreview.classList.add("hidden")
+              imgEmpty.classList.remove("hidden")
+            }
+          })
+          imgWrap.appendChild(imgInput)
+
+          const imgPreview = document.createElement("img")
+          imgPreview.className = bp.image
+            ? "w-32 h-32 object-contain rounded-xl border border-zinc-800 bg-zinc-950"
+            : "w-32 h-32 object-contain rounded-xl border border-zinc-800 bg-zinc-950 hidden"
+          if (bp.image) imgPreview.src = bp.image
+          imgPreview.alt = "Blueprint image preview"
+          imgPreview.addEventListener("error", () => {
+            imgPreview.classList.add("hidden")
+            imgEmpty.classList.remove("hidden")
+          })
+          imgWrap.appendChild(imgPreview)
+
+          const imgEmpty = document.createElement("div")
+          imgEmpty.className = bp.image
+            ? "hidden"
+            : "w-32 h-32 rounded-xl border border-zinc-800 bg-zinc-950 grid place-items-center text-zinc-500 text-xs"
+          imgEmpty.textContent = "No image"
+          imgWrap.appendChild(imgEmpty)
+
+          rImg.querySelector(".md\\:col-span-8").appendChild(imgWrap)
+          container.appendChild(rImg)
 
           // Flags
           const rFlags = row("Flags", "Toggle each boolean field")
@@ -955,6 +1017,7 @@
           data.blueprints.push({
             name: "New Blueprint",
             workshop: "",
+            image: "",
             crafting_recipe: [{ item: "", quantity: 0 }],
             available: true,
             loot: false,
