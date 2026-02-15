@@ -1,0 +1,12 @@
+{
+  "name": "arcbp-editor",
+  "version": "1.0.0",
+  "description": "Blueprint editor with image scraping for Arc Raiders",
+  "private": true,
+  "scripts": {
+    "scrape": "node scrape-images.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0"
+  }
+}

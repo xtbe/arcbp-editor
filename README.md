@@ -28,3 +28,32 @@ Docker Compose automatically mounts `./images` as a read-only volume. When runni
 ```bash
 docker run --rm -p 8080:80 -v ./images:/usr/share/nginx/html/images:ro arcbp-editor
 ```
+
+## Scraping Images from the Wiki
+
+The `scrape-images.js` script downloads blueprint images from the [Arc Raiders Fandom wiki](https://arc-raiders.fandom.com/wiki/Blueprints) and optionally updates a local blueprints JSON file.
+
+### Running locally (requires Node.js 18+)
+
+```bash
+npm install
+# Download images to ./images (skips existing files)
+npm run scrape
+
+# Download images and update a blueprints JSON file
+node scrape-images.js --blueprints blueprints.json
+```
+
+### Running inside Docker
+
+```bash
+docker compose exec web node /opt/scraper/scrape-images.js \
+  --output /usr/share/nginx/html/images
+```
+
+### Options
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--output` | `-o` | `./images` | Directory to save downloaded images |
+| `--blueprints` | `-b` | *(none)* | Path to a blueprints JSON file — the script updates the `image` field for matching entries that don't already have one |
