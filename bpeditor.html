@@ -611,11 +611,11 @@
         }
 
         // --- list render (paged) ---
-        function renderList() {
+        function renderList(keepPage) {
           elList.innerHTML = ""
 
           const filtered = getFilteredIndices()
-          ensureSelectedVisible(filtered)
+          if (!keepPage) ensureSelectedVisible(filtered)
 
           const totalItems = filtered.length
           elCountShown.textContent = String(totalItems)
@@ -1093,12 +1093,12 @@
 
         btnPrevPage.addEventListener("click", () => {
           page = Math.max(1, page - 1)
-          renderList()
+          renderList(true)
         })
 
         btnNextPage.addEventListener("click", () => {
           page = page + 1
-          renderList()
+          renderList(true)
         })
 
         btnNew.addEventListener("click", () => {
