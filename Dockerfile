@@ -1,11 +1,13 @@
+# ── Build stage ────────────────────────────────────────────────────────────────
+FROM node:22-alpine AS builder
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# ── Serve stage ────────────────────────────────────────────────────────────────
 FROM nginx:stable-alpine
-
-# Copy the single-page app into the default nginx html folder
-COPY bpeditor.html /usr/share/nginx/html/index.html
-
-# Copy the data folder (JSON and images)
-COPY data /usr/share/nginx/html/data
-
+COPY --from=builder /app/dist /usr/share/nginx/html
+# Data folder is mounted as a volume at runtime (see docker-compose.yml)
 EXPOSE 80
-
-# Use the default nginx entrypoint/CMD from the base image

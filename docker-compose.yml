@@ -8,5 +8,3 @@ services:
     restart: unless-stopped
     volumes:
       - ./data:/usr/share/nginx/html/data:ro
-    # For development you can uncomment the volume below to pick up changes
-    # - ./bpeditor.html:/usr/share/nginx/html/index.html:ro
