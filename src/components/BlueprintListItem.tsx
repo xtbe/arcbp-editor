@@ -57,7 +57,7 @@ export const BlueprintListItem = memo(function BlueprintListItem({
   return (
     <button
       className={`w-full text-left p-3 border-b border-zinc-800 hover:bg-zinc-800/40 focus:outline-none ${
-        isSelected ? 'bg-indigo-950/40' : 'bg-transparent'
+        isSelected ? 'bg-indigo-100/70 dark:bg-indigo-950/40' : 'bg-transparent'
       }`}
       onClick={onClick}
     >
@@ -67,7 +67,7 @@ export const BlueprintListItem = memo(function BlueprintListItem({
           <div className="flex items-center gap-2">
             <div className="font-semibold truncate">{bp.name || '(unnamed)'}</div>
             {bp.available ? (
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-900/40 border border-emerald-900 text-emerald-200">
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-700 dark:bg-emerald-900/40 dark:border-emerald-900 dark:text-emerald-200">
                 A
               </span>
             ) : (

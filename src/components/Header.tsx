@@ -23,7 +23,9 @@ export function Header({ onNew, onFileLoad, onPaste, onViewJson, onReset }: Head
         </div>
 
         <button
-          className="px-3 py-2 rounded-xl bg-emerald-600/90 hover:bg-emerald-600 text-sm font-medium"
+          className="px-3 py-2 rounded-xl border text-sm font-medium
+            bg-emerald-100 border-emerald-300 text-emerald-700 hover:bg-emerald-200
+            dark:bg-emerald-600/90 dark:hover:bg-emerald-600 dark:border-transparent dark:text-white"
           onClick={onNew}
         >
           + New blueprint
@@ -51,7 +53,9 @@ export function Header({ onNew, onFileLoad, onPaste, onViewJson, onReset }: Head
         </button>
 
         <button
-          className="px-3 py-2 rounded-xl bg-indigo-600/90 hover:bg-indigo-600 text-sm font-medium"
+          className="px-3 py-2 rounded-xl border text-sm font-medium
+            bg-indigo-100 border-indigo-300 text-indigo-700 hover:bg-indigo-200
+            dark:bg-indigo-600/90 dark:hover:bg-indigo-600 dark:border-transparent dark:text-white"
           onClick={onViewJson}
         >
           View JSON

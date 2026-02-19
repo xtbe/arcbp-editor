@@ -55,7 +55,9 @@ export function ImageField({ value, onChange, onStatus }: ImageFieldProps) {
         />
         <button
           type="button"
-          className="px-3 py-2 rounded-xl bg-indigo-600/90 hover:bg-indigo-600 text-sm font-medium whitespace-nowrap"
+          className="px-3 py-2 rounded-xl border text-sm font-medium whitespace-nowrap
+            bg-indigo-100 border-indigo-300 text-indigo-700 hover:bg-indigo-200
+            dark:bg-indigo-600/90 dark:hover:bg-indigo-600 dark:border-transparent dark:text-white"
           onClick={() => fileInputRef.current?.click()}
         >
           Browse…

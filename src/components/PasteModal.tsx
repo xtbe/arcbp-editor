@@ -34,7 +34,7 @@ export function PasteModal({ onLoad, onClose }: PasteModalProps) {
             <div className="font-semibold">Paste JSON</div>
             <div className="text-xs text-zinc-400">
               Must be a JSON object with a{' '}
-              <code className="text-zinc-200">blueprints</code> array
+              <code className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-100 text-[11px]">blueprints</code> array
             </div>
           </div>
           <button
@@ -55,13 +55,15 @@ export function PasteModal({ onLoad, onClose }: PasteModalProps) {
           />
           <div className="mt-3 flex items-center gap-2 justify-end">
             <button
-              className="px-3 py-2 rounded-xl bg-indigo-600/90 hover:bg-indigo-600 text-sm font-medium"
+              className="px-3 py-2 rounded-xl border text-sm font-medium
+                bg-indigo-100 border-indigo-300 text-indigo-700 hover:bg-indigo-200
+                dark:bg-indigo-600/90 dark:hover:bg-indigo-600 dark:border-transparent dark:text-white"
               onClick={handleLoad}
             >
               Load
             </button>
           </div>
-          {error && <div className="mt-2 text-sm text-red-300">{error}</div>}
+          {error && <div className="mt-2 text-sm text-red-600 dark:text-red-300">{error}</div>}
         </div>
       </div>
     </div>
