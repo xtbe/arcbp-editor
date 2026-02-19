@@ -13,6 +13,12 @@ RUN ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/') && \
   && rm /tmp/pb.zip \
   && chmod +x /pb/pocketbase
 
+# Work from /pb so PocketBase finds pb_migrations/ and pb_data/ automatically
+WORKDIR /pb
+
+# Copy migrations — run automatically on first start, skipped on subsequent starts
+COPY pb_migrations/ /pb/pb_migrations/
+
 VOLUME /pb/pb_data
 
 EXPOSE 8090
