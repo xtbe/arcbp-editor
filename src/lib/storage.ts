@@ -1,22 +1,29 @@
+/**
+ * storage.ts — JSON export / import helpers.
+ *
+ * localStorage persistence has been removed in favour of PocketBase.
+ * These utilities remain to support the "Download JSON" and "Load JSON file"
+ * features that let users keep offline backups.
+ */
+
 import type { BlueprintsData } from '../types'
-import { ensureShape } from './dataUtils'
 
-const STORAGE_KEY = 'blueprints_editor_v3_paging'
-
-export function saveToStorage(data: BlueprintsData): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-  } catch {
-    // Silently fail; caller handles status display
+/** Serialise the current dataset to a pretty-printed JSON string. */
+export function toJsonString(data: BlueprintsData): string {
+  // Strip PocketBase ids before exporting so the file is portable
+  const portable: BlueprintsData = {
+    blueprints: data.blueprints.map(({ id: _id, ...rest }) => rest),
   }
+  return JSON.stringify(portable, null, 2)
 }
 
-export function loadFromStorage(): BlueprintsData | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    return ensureShape(JSON.parse(raw) as unknown)
-  } catch {
-    return null
-  }
+/** Trigger a browser download of the current dataset as blueprints.json. */
+export function downloadJson(data: BlueprintsData): void {
+  const blob = new Blob([toJsonString(data)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'blueprints.json'
+  a.click()
+  URL.revokeObjectURL(url)
 }

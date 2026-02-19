@@ -4,6 +4,7 @@ export interface RecipeItem {
 }
 
 export interface Blueprint {
+  id?: string        // PocketBase record id; absent on unsaved/local-only records
   name: string
   workshop: string
   image: string

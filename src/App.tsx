@@ -1,9 +1,14 @@
 import { useState, useCallback, useEffect } from 'react'
 import type { Blueprint, BlueprintsData, FilterAvailability, RecipeItem, StatusMessage, StatusType } from './types'
-import { SAMPLE } from './lib/sampleData'
-import { saveToStorage, loadFromStorage } from './lib/storage'
 import { ensureShape, getFilteredIndices } from './lib/dataUtils'
 import { useTheme } from './lib/theme'
+import {
+  fetchBlueprints,
+  createBlueprint,
+  updateBlueprint as apiUpdateBlueprint,
+  deleteBlueprint as apiDeleteBlueprint,
+  replaceAllBlueprints,
+} from './lib/api'
 import { Header } from './components/Header'
 import { Sidebar } from './components/Sidebar'
 import type { AppView } from './components/Sidebar'
@@ -16,7 +21,9 @@ import { JsonModal } from './components/JsonModal'
 function App() {
   const { resolved: resolvedTheme, toggleTheme } = useTheme()
   const [activeView, setActiveView] = useState<AppView>('blueprints')
-  const [data, setData] = useState<BlueprintsData>(() => loadFromStorage() ?? structuredClone(SAMPLE))
+  const [data, setData] = useState<BlueprintsData>({ blueprints: [] })
+  const [loading, setLoading] = useState(true)
+  const [pbError, setPbError] = useState<string | null>(null)
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -26,24 +33,42 @@ function App() {
   const [jsonModalOpen, setJsonModalOpen] = useState(false)
   const [pasteModalOpen, setPasteModalOpen] = useState(false)
 
-  // Try loading from data/blueprints.json on mount (overrides localStorage)
+  // ── Bootstrap: load all blueprints from PocketBase ─────────────────────────
+
+  function loadBlueprints() {
+    setLoading(true)
+    setPbError(null)
+    fetchBlueprints()
+      .then((blueprints) => {
+        setData({ blueprints })
+        setStatus({ type: 'info', text: `Loaded ${blueprints.length} blueprint(s) from PocketBase.` })
+      })
+      .catch((err: unknown) => {
+        // Ignore auto-cancelled requests (React StrictMode double-invokes effects)
+        if ((err as { isAbort?: boolean }).isAbort) return
+
+        const status = (err as { status?: number }).status
+        const message = (err as Error).message ?? String(err)
+        // status 0 = TCP-level failure — server is not running or not reachable
+        const isNetworkError =
+          status === 0 ||
+          message.toLowerCase().includes('failed to fetch') ||
+          message.toLowerCase().includes('failed to connect')
+        if (isNetworkError) {
+          setPbError(
+            `Cannot connect to PocketBase at http://localhost:8090. ` +
+            `Make sure PocketBase is running.`
+          )
+        } else {
+          setStatus({ type: 'err', text: `PocketBase error: ${message}` })
+        }
+      })
+      .finally(() => setLoading(false))
+  }
+
   useEffect(() => {
-    let cancelled = false
-    fetch('data/blueprints.json')
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Not found'))))
-      .then((json: unknown) => {
-        if (!cancelled) {
-          setData(ensureShape(json))
-          setStatus({ type: 'info', text: 'Loaded from data/blueprints.json' })
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          const stored = loadFromStorage()
-          setStatus({ type: 'info', text: stored ? 'Loaded from localStorage.' : 'Loaded sample data.' })
-        }
-      })
-    return () => { cancelled = true }
+    loadBlueprints()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Keep selected item on its correct page when search/filter changes
@@ -57,70 +82,59 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, filterAvailability])
 
-  // ── Status helper ──────────────────────────────────────────────────────────
+  // ── Status helper ───────────────────────────────────────────────────────────
 
   const setStatusMsg = useCallback((type: StatusType, text: string) => {
     setStatus({ type, text })
   }, [])
 
-  // ── Data mutations ─────────────────────────────────────────────────────────
-
-  const applyData = useCallback((next: BlueprintsData) => {
-    setData(next)
-    saveToStorage(next)
-  }, [])
+  // ── Data mutations ──────────────────────────────────────────────────────────
 
   const updateBlueprint = useCallback((index: number, updates: Partial<Blueprint>) => {
+    const bp = data.blueprints[index]
+    if (!bp?.id) return
+    // Optimistic update
     setData((prev) => {
       const blueprints = [...prev.blueprints]
       blueprints[index] = { ...blueprints[index], ...updates }
-      const next = { ...prev, blueprints }
-      saveToStorage(next)
-      return next
+      return { ...prev, blueprints }
     })
-  }, [])
+    apiUpdateBlueprint(bp.id, updates).catch((err: unknown) => {
+      setStatus({ type: 'err', text: `Save failed: ${(err as Error).message ?? String(err)}` })
+      // Re-fetch to restore consistent state
+      fetchBlueprints().then((blueprints) => setData({ blueprints })).catch(() => null)
+    })
+  }, [data.blueprints])
 
   const updateRecipeItem = useCallback(
     (bpIndex: number, recipeIndex: number, updates: Partial<RecipeItem>) => {
-      setData((prev) => {
-        const blueprints = [...prev.blueprints]
-        const recipe = [...blueprints[bpIndex].crafting_recipe]
-        recipe[recipeIndex] = { ...recipe[recipeIndex], ...updates }
-        blueprints[bpIndex] = { ...blueprints[bpIndex], crafting_recipe: recipe }
-        const next = { ...prev, blueprints }
-        saveToStorage(next)
-        return next
-      })
+      const bp = data.blueprints[bpIndex]
+      if (!bp?.id) return
+      const recipe = [...bp.crafting_recipe]
+      recipe[recipeIndex] = { ...recipe[recipeIndex], ...updates }
+      updateBlueprint(bpIndex, { crafting_recipe: recipe })
     },
-    [],
+    [data.blueprints, updateBlueprint],
   )
 
   const addRecipeItem = useCallback((bpIndex: number) => {
-    setData((prev) => {
-      const blueprints = [...prev.blueprints]
-      const recipe = [...blueprints[bpIndex].crafting_recipe, { item: '', quantity: 0 }]
-      blueprints[bpIndex] = { ...blueprints[bpIndex], crafting_recipe: recipe }
-      const next = { ...prev, blueprints }
-      saveToStorage(next)
-      return next
-    })
-  }, [])
+    const bp = data.blueprints[bpIndex]
+    if (!bp?.id) return
+    const recipe = [...bp.crafting_recipe, { item: '', quantity: 0 }]
+    updateBlueprint(bpIndex, { crafting_recipe: recipe })
+  }, [data.blueprints, updateBlueprint])
 
   const removeRecipeItem = useCallback((bpIndex: number, recipeIndex: number) => {
-    setData((prev) => {
-      const blueprints = [...prev.blueprints]
-      const recipe = blueprints[bpIndex].crafting_recipe.filter((_, i) => i !== recipeIndex)
-      blueprints[bpIndex] = { ...blueprints[bpIndex], crafting_recipe: recipe }
-      const next = { ...prev, blueprints }
-      saveToStorage(next)
-      return next
-    })
-  }, [])
+    const bp = data.blueprints[bpIndex]
+    if (!bp?.id) return
+    const recipe = bp.crafting_recipe.filter((_, i) => i !== recipeIndex)
+    updateBlueprint(bpIndex, { crafting_recipe: recipe })
+  }, [data.blueprints, updateBlueprint])
 
-  // ── CRUD handlers ──────────────────────────────────────────────────────────
+  // ── CRUD handlers ───────────────────────────────────────────────────────────
 
-  function handleNew() {
-    const newBp: Blueprint = {
+  async function handleNew() {
+    const newBp: Omit<Blueprint, 'id'> = {
       name: 'New Blueprint',
       workshop: '',
       image: '',
@@ -131,55 +145,92 @@ function App() {
       quest_reward: false,
       trials_reward: false,
     }
-    const next = { blueprints: [...data.blueprints, newBp] }
-    applyData(next)
-    setSelectedIndex(next.blueprints.length - 1)
-    setStatus({ type: 'ok', text: 'Added a new blueprint.' })
+    try {
+      const created = await createBlueprint(newBp)
+      setData((prev) => ({ blueprints: [...prev.blueprints, created] }))
+      setSelectedIndex(data.blueprints.length) // new item is at the end
+      setStatus({ type: 'ok', text: 'Added a new blueprint.' })
+    } catch (err: unknown) {
+      setStatus({ type: 'err', text: `Create failed: ${(err as Error).message ?? String(err)}` })
+    }
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (selectedIndex < 0) return
-    const name = data.blueprints[selectedIndex]?.name || 'this blueprint'
+    const bp = data.blueprints[selectedIndex]
+    if (!bp?.id) return
+    const name = bp.name || 'this blueprint'
     if (!confirm(`Delete "${name}"?`)) return
-    const blueprints = data.blueprints.filter((_, i) => i !== selectedIndex)
-    applyData({ ...data, blueprints })
-    setSelectedIndex(Math.min(selectedIndex, blueprints.length - 1))
-    setStatus({ type: 'ok', text: 'Deleted.' })
+    try {
+      await apiDeleteBlueprint(bp.id)
+      const blueprints = data.blueprints.filter((_, i) => i !== selectedIndex)
+      setData({ blueprints })
+      setSelectedIndex(Math.min(selectedIndex, blueprints.length - 1))
+      setStatus({ type: 'ok', text: 'Deleted.' })
+    } catch (err: unknown) {
+      setStatus({ type: 'err', text: `Delete failed: ${(err as Error).message ?? String(err)}` })
+    }
   }
 
-  function handleDuplicate() {
+  async function handleDuplicate() {
     if (selectedIndex < 0) return
     const original = data.blueprints[selectedIndex]
-    const copy: Blueprint = {
-      ...structuredClone(original),
+    if (!original) return
+    const { id: _id, ...fields } = original
+    const copy: Omit<Blueprint, 'id'> = {
+      ...structuredClone(fields),
       name: original.name ? `${original.name} (Copy)` : 'Copy',
     }
-    const blueprints = [...data.blueprints]
-    blueprints.splice(selectedIndex + 1, 0, copy)
-    applyData({ ...data, blueprints })
-    setSelectedIndex(selectedIndex + 1)
-    setStatus({ type: 'ok', text: 'Duplicated.' })
+    try {
+      const created = await createBlueprint(copy)
+      const blueprints = [...data.blueprints]
+      blueprints.splice(selectedIndex + 1, 0, created)
+      setData({ blueprints })
+      setSelectedIndex(selectedIndex + 1)
+      setStatus({ type: 'ok', text: 'Duplicated.' })
+    } catch (err: unknown) {
+      setStatus({ type: 'err', text: `Duplicate failed: ${(err as Error).message ?? String(err)}` })
+    }
   }
 
-  function handleReset() {
-    if (!confirm('Reset editor to the sample data? This overwrites your current work (localStorage too).')) return
-    applyData(structuredClone(SAMPLE))
-    setSelectedIndex(-1)
-    setPage(1)
-    setPageSize(10)
-    setStatus({ type: 'ok', text: 'Reset to sample.' })
+  async function handleReset() {
+    if (!confirm('Reset to sample data? This will delete all current blueprints in the database.')) return
+    const { SAMPLE } = await import('./lib/sampleData')
+    try {
+      const blueprints = await replaceAllBlueprints(SAMPLE.blueprints)
+      setData({ blueprints })
+      setSelectedIndex(-1)
+      setPage(1)
+      setPageSize(10)
+      setStatus({ type: 'ok', text: 'Reset to sample.' })
+    } catch (err: unknown) {
+      setStatus({ type: 'err', text: `Reset failed: ${(err as Error).message ?? String(err)}` })
+    }
   }
 
   async function handleFileLoad(file: File) {
     try {
       const text = await file.text()
       const parsed = ensureShape(JSON.parse(text) as unknown)
-      applyData(parsed)
+      const blueprints = await replaceAllBlueprints(parsed.blueprints)
+      setData({ blueprints })
       setSelectedIndex(-1)
       setPage(1)
-      setStatus({ type: 'ok', text: `Loaded ${file.name}` })
+      setStatus({ type: 'ok', text: `Imported ${blueprints.length} blueprint(s) from ${file.name}.` })
     } catch (e) {
-      setStatus({ type: 'err', text: `Could not load JSON: ${(e as Error).message ?? String(e)}` })
+      setStatus({ type: 'err', text: `Import failed: ${(e as Error).message ?? String(e)}` })
+    }
+  }
+
+  async function handlePasteLoad(parsed: BlueprintsData) {
+    try {
+      const blueprints = await replaceAllBlueprints(parsed.blueprints)
+      setData({ blueprints })
+      setSelectedIndex(-1)
+      setPage(1)
+      setStatus({ type: 'ok', text: `Imported ${blueprints.length} blueprint(s) from pasted JSON.` })
+    } catch (err: unknown) {
+      setStatus({ type: 'err', text: `Import failed: ${(err as Error).message ?? String(err)}` })
     }
   }
 
@@ -200,13 +251,50 @@ function App() {
       {/* ── Main column ─────────────────────────────────── */}
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header
-          onNew={handleNew}
+          onNew={() => { void handleNew() }}
           onFileLoad={handleFileLoad}
           onPaste={() => setPasteModalOpen(true)}
           onViewJson={() => setJsonModalOpen(true)}
-          onReset={handleReset}
+          onReset={() => { void handleReset() }}
         />
 
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center text-zinc-400 text-sm gap-3">
+            <svg className="animate-spin w-5 h-5 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+            </svg>
+            Connecting to PocketBase…
+          </div>
+        ) : pbError ? (
+          <div className="flex-1 flex items-center justify-center p-8">
+            <div className="max-w-md w-full rounded-2xl border border-red-900/50 bg-red-950/20 p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🔌</span>
+                <div>
+                  <div className="font-semibold text-red-300">PocketBase not reachable</div>
+                  <div className="text-xs text-zinc-400 mt-0.5">{pbError}</div>
+                </div>
+              </div>
+              <div className="text-sm text-zinc-300 space-y-1">
+                <p className="font-medium">To start PocketBase locally:</p>
+                <ol className="list-decimal list-inside space-y-1 text-zinc-400">
+                  <li>Run <code className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-200 text-xs">docker compose up api</code> in the project root</li>
+                  <li>Open <code className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-200 text-xs">http://localhost:8090/_/</code> and create your admin account</li>
+                  <li>Create the <code className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-200 text-xs">blueprints</code> collection (see README)</li>
+                </ol>
+              </div>
+              <button
+                className="w-full px-4 py-2 rounded-xl border text-sm font-medium
+                  bg-indigo-100 border-indigo-300 text-indigo-700 hover:bg-indigo-200
+                  dark:bg-indigo-600/90 dark:hover:bg-indigo-600 dark:border-transparent dark:text-white"
+                onClick={loadBlueprints}
+              >
+                Retry connection
+              </button>
+            </div>
+          </div>
+        ) : (
         <main className="flex-1 overflow-y-auto px-4 py-6">
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -239,7 +327,7 @@ function App() {
                     <button
                       className="px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
                       disabled={selectedIndex < 0}
-                      onClick={handleDuplicate}
+                      onClick={() => { void handleDuplicate() }}
                     >
                       Duplicate
                     </button>
@@ -248,7 +336,7 @@ function App() {
                         bg-red-100 border-red-300 text-red-700 hover:bg-red-200
                         dark:bg-red-600/90 dark:hover:bg-red-600 dark:border-transparent dark:text-white"
                       disabled={selectedIndex < 0}
-                      onClick={handleDelete}
+                      onClick={() => { void handleDelete() }}
                     >
                       Delete
                     </button>
@@ -276,16 +364,12 @@ function App() {
             </div>
           </div>
         </main>
+        )}
       </div>
 
       {pasteModalOpen && (
         <PasteModal
-          onLoad={(parsed) => {
-            applyData(parsed)
-            setSelectedIndex(-1)
-            setPage(1)
-            setStatus({ type: 'ok', text: 'Loaded pasted JSON.' })
-          }}
+          onLoad={(parsed) => { void handlePasteLoad(parsed) }}
           onClose={() => setPasteModalOpen(false)}
         />
       )}

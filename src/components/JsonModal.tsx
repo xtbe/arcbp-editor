@@ -1,4 +1,5 @@
 import type { BlueprintsData } from '../types'
+import { toJsonString } from '../lib/storage'
 import { downloadJson } from '../lib/utils'
 
 interface JsonModalProps {
@@ -10,7 +11,8 @@ interface JsonModalProps {
 }
 
 export function JsonModal({ data, onClose, onCopied, onDownloaded, onCopyFailed }: JsonModalProps) {
-  const jsonText = JSON.stringify(data, null, 2)
+  // Strip PocketBase ids so the exported JSON is portable/clean
+  const jsonText = toJsonString(data)
 
   async function handleCopy() {
     try {

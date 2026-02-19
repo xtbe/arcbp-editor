@@ -1,11 +1,23 @@
-version: "3.8"
-
 services:
   web:
     build: .
     ports:
       - "${HOST_PORT:-8080}:80"
+    depends_on:
+      - api
     restart: unless-stopped
-    # For development you can uncomment the volume below to pick up changes
-    # volumes:
-    #   - ./bpeditor.html:/usr/share/nginx/html/index.html:ro
+
+  api:
+    build:
+      context: ./pb
+      dockerfile: Dockerfile
+      args:
+        PB_VERSION: "0.36.4"
+    ports:
+      - "${API_PORT:-8090}:8090"
+    volumes:
+      - pb_data:/pb/pb_data
+    restart: unless-stopped
+
+volumes:
+  pb_data:
