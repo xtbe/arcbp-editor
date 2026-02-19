@@ -25,3 +25,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Images copied for local dev (source of truth is data/images/)
+public/images/
+
+# 
+data/
