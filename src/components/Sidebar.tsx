@@ -137,7 +137,7 @@ export function Sidebar({ activeView, onNavigate, isDark, onThemeToggle }: Sideb
       className={`
         flex flex-col shrink-0 bg-zinc-900 border-r border-zinc-800
         transition-[width] duration-200 ease-in-out overflow-hidden
-        ${collapsed ? 'w-14' : 'w-56'}
+        ${collapsed ? 'w-14' : 'w-64'}
       `}
     >
       {/* ── Logo ──────────────────────────────────────────────────── */}
@@ -148,9 +148,9 @@ export function Sidebar({ activeView, onNavigate, isDark, onThemeToggle }: Sideb
         {!collapsed && (
           <div className="overflow-hidden">
             <div className="font-semibold text-sm text-zinc-100 truncate leading-tight">
-              Blueprints Editor
+              Arc Raiders Workbench
             </div>
-            <div className="text-[10px] text-zinc-500 truncate">ARC data entry tool</div>
+            <div className="text-[10px] text-zinc-500 truncate">Management tool</div>
           </div>
         )}
       </div>
