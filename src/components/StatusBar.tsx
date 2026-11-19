@@ -1,9 +1,9 @@
 import type { StatusMessage } from '../types'
 
 const statusStyles: Record<string, string> = {
-  ok: 'bg-emerald-950/40 border-emerald-900 text-emerald-200',
-  warn: 'bg-amber-950/40 border-amber-900 text-amber-200',
-  err: 'bg-red-950/40 border-red-900 text-red-200',
+  ok:   'bg-emerald-50 border-emerald-300 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-900 dark:text-emerald-200',
+  warn: 'bg-amber-50 border-amber-300 text-amber-700 dark:bg-amber-950/40 dark:border-amber-900 dark:text-amber-200',
+  err:  'bg-red-50 border-red-300 text-red-700 dark:bg-red-950/40 dark:border-red-900 dark:text-red-200',
   info: 'bg-zinc-900/60 border-zinc-800 text-zinc-200',
 }
 

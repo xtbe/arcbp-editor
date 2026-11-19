@@ -17,6 +17,7 @@ export function ensureShape(obj: unknown): BlueprintsData {
         })
       : []
     return {
+      ...(b.id ? { id: String(b.id) } : {}),
       name: String(b.name ?? ''),
       workshop: String(b.workshop ?? ''),
       image: String(b.image ?? ''),

@@ -17,7 +17,9 @@ export function RecipeEditor({ recipe, onAdd, onUpdate, onRemove }: RecipeEditor
           <div className="text-xs text-zinc-400">Edit items and quantities</div>
         </div>
         <button
-          className="px-3 py-2 rounded-xl bg-emerald-600/90 hover:bg-emerald-600 text-sm font-medium"
+          className="px-3 py-2 rounded-xl border text-sm font-medium
+            bg-emerald-100 border-emerald-300 text-emerald-700 hover:bg-emerald-200
+            dark:bg-emerald-600/90 dark:hover:bg-emerald-600 dark:border-transparent dark:text-white"
           onClick={onAdd}
         >
           + Add ingredient
@@ -45,7 +47,7 @@ export function RecipeEditor({ recipe, onAdd, onUpdate, onRemove }: RecipeEditor
                 onChange={(e) => onUpdate(i, { quantity: clampInt(e.target.value, 0) })}
               />
               <button
-                className="col-span-2 px-3 py-2 rounded-xl bg-zinc-900 hover:bg-red-600/20 border border-zinc-800 hover:border-red-800 text-sm font-medium"
+                className="col-span-2 px-3 py-2 rounded-xl bg-zinc-900 hover:bg-red-500/10 border border-zinc-800 hover:border-red-400 dark:hover:bg-red-600/20 dark:hover:border-red-800 text-sm font-medium"
                 onClick={() => onRemove(i)}
               >
                 Remove

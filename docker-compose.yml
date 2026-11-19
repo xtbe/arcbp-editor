@@ -1,10 +1,25 @@
-version: "3.8"
-
 services:
   web:
     build: .
     ports:
-      - "8080:80"
-    restart: unless-stopped
+      - "${HOST_PORT:-8080}:80"
     volumes:
-      - ./data:/usr/share/nginx/html/data:ro
+      - ./data/images:/usr/share/nginx/html/images:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./pb
+      dockerfile: Dockerfile
+      args:
+        PB_VERSION: "0.36.4"
+    ports:
+      - "${API_PORT:-8090}:8090"
+    volumes:
+      - pb_data:/pb/pb_data
+    restart: unless-stopped
+
+volumes:
+  pb_data:

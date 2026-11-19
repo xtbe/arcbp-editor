@@ -1,1 +1,35 @@
 @import "tailwindcss";
+
+/* Enable class-based dark mode so `dark:` prefixes work with html.dark */
+@custom-variant dark (&:where(.dark, .dark *));
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Dark mode (default app palette) ── */
+html.dark {
+  color-scheme: dark;
+}
+
+/*
+  Light mode: invert the zinc scale so every bg-zinc-* / text-zinc-* /
+  border-zinc-* class automatically flips without touching any component.
+  Tailwind v4 resolves zinc utilities to var(--color-zinc-{n}), so
+  overriding the CSS vars here is all that's needed.
+*/
+html.light {
+  color-scheme: light;
+  --color-zinc-950: oklch(.985 .002 247.86);  /* was near-black → near-white  */
+  --color-zinc-900: oklch(.967 .001 286.32);  /* → zinc-100 value             */
+  --color-zinc-800: oklch(.92  .004 264.54);  /* → zinc-200 value             */
+  --color-zinc-700: oklch(.871 .006 286.29);  /* → zinc-300 value             */
+  --color-zinc-600: oklch(.705 .015 286.06);  /* → zinc-400 value             */
+  --color-zinc-500: oklch(.553 .016 285.94);  /* mid-tone stays               */
+  --color-zinc-400: oklch(.442 .017 285.99);  /* → zinc-600 value             */
+  --color-zinc-300: oklch(.37  .013 285.81);  /* → zinc-700 value             */
+  --color-zinc-200: oklch(.274 .006 286.03);  /* → zinc-800 value             */
+  --color-zinc-100: oklch(.21  .006 285.89);  /* → zinc-900 value             */
+  --color-zinc-50:  oklch(.141 .005 285.82);  /* was near-white → near-black  */
+}

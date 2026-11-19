@@ -1,4 +1,5 @@
 import type { BlueprintsData } from '../types'
+import { toJsonString } from '../lib/storage'
 import { downloadJson } from '../lib/utils'
 
 interface JsonModalProps {
@@ -10,7 +11,8 @@ interface JsonModalProps {
 }
 
 export function JsonModal({ data, onClose, onCopied, onDownloaded, onCopyFailed }: JsonModalProps) {
-  const jsonText = JSON.stringify(data, null, 2)
+  // Strip PocketBase ids so the exported JSON is portable/clean
+  const jsonText = toJsonString(data)
 
   async function handleCopy() {
     try {
@@ -41,19 +43,25 @@ export function JsonModal({ data, onClose, onCopied, onDownloaded, onCopyFailed 
           </div>
           <div className="flex items-center gap-2">
             <button
-              className="px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-sm font-medium"
+              className="px-3 py-2 rounded-xl border text-sm font-medium
+                bg-zinc-100 border-zinc-300 text-zinc-700 hover:bg-zinc-200
+                dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
               onClick={handleCopy}
             >
               Copy
             </button>
             <button
-              className="px-3 py-2 rounded-xl bg-indigo-600/90 hover:bg-indigo-600 text-sm font-medium"
+              className="px-3 py-2 rounded-xl text-sm font-medium
+                bg-indigo-100 border border-indigo-300 text-indigo-700 hover:bg-indigo-200
+                dark:bg-indigo-600/90 dark:hover:bg-indigo-600 dark:border-transparent dark:text-white"
               onClick={handleDownload}
             >
               Download
             </button>
             <button
-              className="px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-sm font-medium"
+              className="px-3 py-2 rounded-xl border text-sm font-medium
+                bg-zinc-100 border-zinc-300 text-zinc-700 hover:bg-zinc-200
+                dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
               onClick={onClose}
             >
               Close
